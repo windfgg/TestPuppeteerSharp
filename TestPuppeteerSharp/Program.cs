@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -45,34 +46,48 @@ namespace TestPuppeteerSharp
         public async static Task<bool> CreateBrowser()
         {
             #region 本地启动
-            var LaunchOptions = new LaunchOptions
-            {
-                Args = new string[]
-            {
-                                           LaunchOptionsArgs.audioEnabled
-            },
-                IgnoreDefaultArgs = true, //是否开启忽略默认参数
-                IgnoredDefaultArgs = new string[]
-            {
-                                           IgnoredOptionsArgs.disableWebdriver属性
-            },
-                Headless = false, //是否在无头模式下运行浏览器 默认true 无头
-                //Timeout = 1000 * 60,//等待浏览器实例启动的最长时间 默认30秒
-                Product = Product.Chrome,//浏览器使用哪个 默认Chrome
-                //SlowMo = 1000, //自动操作的速度非常快，以至于看不清楚元素的动作，为了方便调试，可以用 slowMo 参数放慢操作，单位 ms：
-                DefaultViewport = new ViewPortOptions() //设置默认视图
-                {
-                    Width = 1920,
-                    Height = 1050,
-                    IsMobile = true,//是否手机
-                },
-                IgnoreHTTPSErrors = false,//导航期间是否忽略HTTPS错误。默认为false
-                Devtools = false,//是否为每个选项卡自动打开DevTools面板。如果此选项为true，则无头选项将设置为false。
-            };
-            browser = await Puppeteer.LaunchAsync(LaunchOptions);
+            /*            var LaunchOptions = new LaunchOptions
+                        {
+                            ExecutablePath = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                            Args = new string[]
+                        {
+                                                       LaunchOptionsArgs.audioEnabled
+                        },
+                            IgnoreDefaultArgs = true, //是否开启忽略默认参数
+                            IgnoredDefaultArgs = new string[]
+                        {
+                                                       IgnoredOptionsArgs.disableWebdriver属性
+                        },
+                            Headless = false, //是否在无头模式下运行浏览器 默认true 无头
+                            //Timeout = 1000 * 60,//等待浏览器实例启动的最长时间 默认30秒
+                            Product = Product.Chrome,//浏览器使用哪个 默认Chrome
+                            //SlowMo = 1000, //自动操作的速度非常快，以至于看不清楚元素的动作，为了方便调试，可以用 slowMo 参数放慢操作，单位 ms：
+                            DefaultViewport = new ViewPortOptions() //设置默认视图
+                            {
+                                Width = 1920,
+                                Height = 1050,
+                                IsMobile = true,//是否手机
+                            },
+                            IgnoreHTTPSErrors = false,//导航期间是否忽略HTTPS错误。默认为false
+                            Devtools = false,//是否为每个选项卡自动打开DevTools面板。如果此选项为true，则无头选项将设置为false。
+                        };*/
+
+            /*            var LaunchOptions = new LaunchOptions
+                        {
+                            ExecutablePath = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                            Headless = false, //是否在无头模式下运行浏览器 默认true 无头
+                            IgnoreDefaultArgs = true, //是否开启忽略默认参数
+                            IgnoredDefaultArgs = new string[]
+                                    {
+                                                                   IgnoredOptionsArgs.disableWebdriver属性
+                                    },
+                        };
+                        browser = await Puppeteer.LaunchAsync(LaunchOptions);*/
             #endregion
 
             #region 远程链接
+            //启动参数 --remote-debugging-address=0.0.0.0 --remote-debugging-port=4079
+            // 检查你的浏览器远程访问是否开启:http://127.0.0.1:4079/ edge://inspect/#devices
             var ConnectOptions = new ConnectOptions()
             {
                 BrowserURL = $"http://127.0.0.1:4079",
@@ -95,7 +110,7 @@ namespace TestPuppeteerSharp
         /// <returns></returns>
         public static async Task Main()
         {
-            await CheckDownloadBrowser(); 
+            await CheckDownloadBrowser();
             await CreateBrowser();
             AnsiConsole.WriteLine(browser.WebSocketEndpoint); //输出ws终结点
         }
@@ -239,57 +254,115 @@ namespace TestPuppeteerSharp
         }
 
         /// <summary>
-        /// 国开简单看视频看文章
+        /// 国开多课程简单看视频看文章
         /// </summary>
         /// <returns></returns>
         public static async void Ouchn()
         {
-            while (true)
+            var CourseList = new Dictionary<string, Page>();
+            var Task = new List<Task>();
+            var Pages = await browser.PagesAsync(); //获取当前所有page
+            Console.WriteLine($"请按照教程来,要关闭所有的Edge界面");
+            Console.WriteLine($"课程结束请输入exit退出课程,在课程未完成时也可以输入exit退出");
+            Console.WriteLine($"课程结束请输入exit退出课程,在课程未完成时也可以输入exit退出");
+            Console.WriteLine($"课程结束请输入exit退出课程,在课程未完成时也可以输入exit退出");
+
+            Thread.Sleep(1000 * 5);
+
+
+            Console.WriteLine($"获取到当前浏览器页面有:{Pages.Length}个");
+            if (Pages.Length > 0)
             {
-                var Pages = await browser.PagesAsync(); //获取当前所有page
-                if (Pages.Length > 0)
+                Console.WriteLine("开始匹配所有链接是否为国开课程页面...");
+                for (int i = 0; i < Pages.Length; i++)
                 {
-                    var Links = await Pages[0].QuerySelectorAllAsync("a[class='aalink']"); //获取第一个页面的所有a标签class为aalink的
-                    Console.WriteLine($"当前页面获取到{Links.Length}个页面链接\n");
-                    if (Links.Length <= 0) break;
-                    Console.WriteLine($"过滤答题链接,只获取课程链接中...\n");
-
-                    var ListLinks = new List<ElementHandle>();
-                    foreach (var Link in Links)
+                    var Page = Pages[i];
+                    var Url = Page.Url.ToString();
+                    var Name = await Page.GetTitleAsync();
+                    if (Regex.IsMatch(Url, @"http://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?id=[0-9]*"))
                     {
-                        var Href = await Link.GetPropertyAsync("href"); //获取href属性
-                        var URL = Href.ToString().Replace("JSHandle:", "");
-                        Console.WriteLine(URL);
-                        if (!URL.Contains("quiz"))
-                        {
-                            ListLinks.Add(Link);
-                        }
+                        Console.WriteLine($"匹配成功:({Name}){Url}");
+                        CourseList.Add(Name, Page);
                     }
-                    Console.WriteLine($"获取到课程链接{ListLinks.Count}个\n");
-
-                    var r = new Random();
-                    if (ListLinks.Count <= 0) break;
-                    for (int i = 0; i < ListLinks.Count; i++)
-                    {
-                        var URL = await ListLinks[i].GetPropertyAsync("href");
-                        var Page = await browser.NewPageAsync();
-                        await Page.GoToAsync(URL.ToString().Replace("JSHandle:", ""), new NavigationOptions() { });
-                        Console.WriteLine($"当前正在浏览第{i}个链接:{URL.ToString().Replace("JSHandle:", "")}");
-                        Console.WriteLine($"等待{r.Next(5, 10)}秒");
-                        Thread.Sleep(1000 * r.Next(5, 10));
-                        await Page.CloseAsync(new PageCloseOptions() { RunBeforeUnload = true });
-                        Console.WriteLine($"关闭页面");
-                        Console.WriteLine($"开始下一个\n");
-                    }
-
-                    Console.WriteLine("学习结束\n");
-                    Console.WriteLine($"已学习{Links.Length}个页面\n");
-
-                    Console.WriteLine("请输入任意键退出...");
+                }
+                if (CourseList.Count > 0)
+                {
+                    Console.WriteLine($"匹配到符合国开课程页面总数:{CourseList.Count}个");
+                }
+                else
+                {
+                    Console.WriteLine($"没有匹配到符合国开课程页面,请输入任意键退出...");
                     Console.ReadLine();
-                    break;
                 }
             }
+            else
+            {
+                Console.WriteLine($"当前获取到页面为0,请输入任意键退出...");
+                Console.ReadLine();
+            }
+
+            Console.WriteLine($"\n开始创建线程...");
+            foreach (var item in CourseList)
+            {
+                var Tas = new System.Threading.Tasks.Task(async () =>
+                {
+                    var Links = await item.Value.QuerySelectorAllAsync("a[class='aalink']"); //获取第一个页面的所有a标签class为aalink的
+                    Console.WriteLine($"[课程:{item.Key}]获取到{Links.Length}个链接");
+                    async Task<bool> OpenLink(ElementHandle[] handles)
+                    {
+                        try
+                        {
+                            var r = new Random();
+                            for (int i = 0; i < Links.Length; i++)
+                            {
+                                var URL = await Links[i].GetPropertyAsync("href");
+                                if (URL.ToString().Replace("JSHandle:", "").Contains(""))
+                                {
+
+                                }
+                                var Page = await browser.NewPageAsync();
+                                await Page.GoToAsync(URL.ToString().Replace("JSHandle:", ""), new NavigationOptions() { });
+                                Console.WriteLine($"[{item.Key}]当前正在浏览第{i}个链接:{URL.ToString().Replace("JSHandle:", "")}");
+                                var s = r.Next(5, 10);
+                                Console.WriteLine($"[{item.Key}]等待{s}秒");
+                                await Page.WaitForTimeoutAsync(s * 1000);
+                                await Page.CloseAsync(new PageCloseOptions() { RunBeforeUnload = true });
+                                Console.WriteLine($"[{item.Key}]关闭页面");
+                                Console.WriteLine($"开始下一个\n");
+                            }
+                        }
+                        catch
+                        {
+
+                        }
+                        return true;
+                    }
+                    await OpenLink(Links);
+                    Console.WriteLine($"[{item.Key}]学习结束 已学习{Links.Length}个链接\n");
+
+                });
+                Task.Add(Tas);
+            }
+            Console.WriteLine($"创建成功！总数{Task.Count}个\n");
+
+            Console.WriteLine($"开始执行！\n");
+            Task.ForEach(Course => { Course.Start(); });
+
+            Thread.Sleep(1000 * 5);
+            void Exit()
+            {
+                var msg = Console.ReadLine();
+                if (msg == "exit")
+                {
+                }
+                else
+                {
+                    Console.WriteLine($"请输入exit退出学习...");
+                    Exit();
+                }
+            }
+
+            Exit();
         }
 
         #endregion
