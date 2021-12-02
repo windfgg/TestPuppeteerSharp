@@ -17,16 +17,6 @@ namespace TestPuppeteerSharp
         public const string disableExtensions = "--disable-extensions";
 
         /// <summary>
-        /// 不使用沙盒
-        /// </summary>
-        public const string noSandbox = "--no-sandbox";
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public const string disableSetuidSandbox = "--disable-setuid-sandbox";
-
-        /// <summary>
         /// 隐蔽滑动条
         /// </summary>
         public const string hideScrollbars = "--hide-scrollbars";
@@ -72,6 +62,6 @@ namespace TestPuppeteerSharp
         /// <summary>
         /// 防爬虫检测 去掉navigator.webdriver属性
         /// </summary>
-        public const string disableExtensions = "--enable-automation";
+        public const string disableWebdriver属性 = "--enable-automation";
     }
 }

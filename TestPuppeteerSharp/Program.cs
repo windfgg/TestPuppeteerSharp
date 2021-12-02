@@ -18,12 +18,12 @@ namespace TestPuppeteerSharp
     public static class Program
     {
         /// <summary>
-        /// 
+        /// 秒表
         /// </summary>
         public static Stopwatch sw { get; set; } = new Stopwatch();
 
         /// <summary>
-        /// 
+        /// 推送+推送服务
         /// </summary>
         public static PushPlus pushPlus { get; set; }
 
@@ -33,9 +33,60 @@ namespace TestPuppeteerSharp
         public static Browser browser { get; set; }
 
         /// <summary>
-        /// 
+        /// 存储Cookies
         /// </summary>
         public static CookieParam[] cookies { get; set; }
+
+        /// <summary>
+        /// 创建浏览器实例
+        /// </summary>
+        /// <returns></returns>
+
+        public async static Task<bool> CreateBrowser()
+        {
+            #region 本地启动
+            var LaunchOptions = new LaunchOptions
+            {
+                Args = new string[]
+            {
+                                           LaunchOptionsArgs.audioEnabled
+            },
+                IgnoreDefaultArgs = true, //是否开启忽略默认参数
+                IgnoredDefaultArgs = new string[]
+            {
+                                           IgnoredOptionsArgs.disableWebdriver属性
+            },
+                Headless = false, //是否在无头模式下运行浏览器 默认true 无头
+                //Timeout = 1000 * 60,//等待浏览器实例启动的最长时间 默认30秒
+                Product = Product.Chrome,//浏览器使用哪个 默认Chrome
+                //SlowMo = 1000, //自动操作的速度非常快，以至于看不清楚元素的动作，为了方便调试，可以用 slowMo 参数放慢操作，单位 ms：
+                DefaultViewport = new ViewPortOptions() //设置默认视图
+                {
+                    Width = 1920,
+                    Height = 1050,
+                    IsMobile = true,//是否手机
+                },
+                IgnoreHTTPSErrors = false,//导航期间是否忽略HTTPS错误。默认为false
+                Devtools = false,//是否为每个选项卡自动打开DevTools面板。如果此选项为true，则无头选项将设置为false。
+            };
+            browser = await Puppeteer.LaunchAsync(LaunchOptions);
+            #endregion
+
+            #region 远程链接
+            var ConnectOptions = new ConnectOptions()
+            {
+                BrowserURL = $"http://127.0.0.1:4079",
+                DefaultViewport = new ViewPortOptions() //设置默认视图
+                {
+                    Width = 1920,
+                    Height = 1028
+                },
+            };
+            browser = await Puppeteer.ConnectAsync(ConnectOptions);
+            #endregion
+
+            return true;
+        }
 
         /// <summary>
         /// 入口函数
@@ -43,58 +94,10 @@ namespace TestPuppeteerSharp
         /// <param name="args"></param>
         /// <returns></returns>
         public static async Task Main()
-        {// Synchronous
-            await CheckDownloadBrowser();
-
-            pushPlus = new PushPlus("0dffc1837bba4ee5bde812f898fc4be0");
-
-
-            var LaunchOptions = new LaunchOptions
-            {
-                Args = new string[]
-                        {
-                            LaunchOptionsArgs.audioEnabled,
-                            //LaunchOptionsArgs.webdriverDisable2,
-                            LaunchOptionsArgs.startMaximized
-                        },
-                IgnoreDefaultArgs = true, //是否开启忽略默认参数
-                IgnoredDefaultArgs = new string[]
-                        {
-                            IgnoredOptionsArgs.disableExtensions
-                        },
-                Headless = false, //是否在无头模式下运行浏览器 默认true 无头
-                //Timeout = 1000 * 60,//等待浏览器实例启动的最长时间 默认30秒
-                Product = Product.Chrome,//浏览器使用哪个 默认Chrome
-                //SlowMo = 1000, //自动操作的速度非常快，以至于看不清楚元素的动作，为了方便调试，可以用 slowMo 参数放慢操作，单位 ms：
-                DefaultViewport = new ViewPortOptions() //设置默认视图
-                {
-
-                    Width = 1920,
-                    Height = 1050,
-                    IsMobile = false,//是否手机
-                },
-
-                IgnoreHTTPSErrors = false,//导航期间是否忽略HTTPS错误。默认为false
-                Devtools = false,//是否为每个选项卡自动打开DevTools面板。如果此选项为true，则无头选项将设置为false。
-            };
-            browser = await Puppeteer.LaunchAsync(LaunchOptions);
-
-            //var ConnectOptions = new ConnectOptions()
-            //{
-            //    BrowserURL = $"http://127.0.0.1:4079",
-            //};
-            //browser = await Puppeteer.ConnectAsync(ConnectOptions);
-
-            //AnsiConsole.WriteLine(browser.WebSocketEndpoint);
-
-            //var context = await browser.CreateIncognitoBrowserContextAsync(); //创建匿名浏览器
-            //var context = await browser.PagesAsync(); //获取当前所有page
-
-            //await GetLoginQrCode();
-            //await EvaluateJavascript("https://www.baidu.com/");
-
-            //await GoogleSeach("Puppeteer快速上手");
-            await GetLoginQrCode();
+        {
+            await CheckDownloadBrowser(); 
+            await CreateBrowser();
+            AnsiConsole.WriteLine(browser.WebSocketEndpoint); //输出ws终结点
         }
 
         #region 使用例子
@@ -157,8 +160,8 @@ namespace TestPuppeteerSharp
                                 if (item.Name == "token")
                                 {
                                     Program.cookies = cookies;
-                                    File.AppendAllText(Json)
-                                    Console.WriteLine($"Guid:{guid}已登录");
+                                    //File.AppendAllText(Json)
+                                    //Console.WriteLine($"Guid:{guid}已登录");
                                     return false;
                                 }
                             }
@@ -235,9 +238,64 @@ namespace TestPuppeteerSharp
             return true;
         }
 
+        /// <summary>
+        /// 国开简单看视频看文章
+        /// </summary>
+        /// <returns></returns>
+        public static async void Ouchn()
+        {
+            while (true)
+            {
+                var Pages = await browser.PagesAsync(); //获取当前所有page
+                if (Pages.Length > 0)
+                {
+                    var Links = await Pages[0].QuerySelectorAllAsync("a[class='aalink']"); //获取第一个页面的所有a标签class为aalink的
+                    Console.WriteLine($"当前页面获取到{Links.Length}个页面链接\n");
+                    if (Links.Length <= 0) break;
+                    Console.WriteLine($"过滤答题链接,只获取课程链接中...\n");
+
+                    var ListLinks = new List<ElementHandle>();
+                    foreach (var Link in Links)
+                    {
+                        var Href = await Link.GetPropertyAsync("href"); //获取href属性
+                        var URL = Href.ToString().Replace("JSHandle:", "");
+                        Console.WriteLine(URL);
+                        if (!URL.Contains("quiz"))
+                        {
+                            ListLinks.Add(Link);
+                        }
+                    }
+                    Console.WriteLine($"获取到课程链接{ListLinks.Count}个\n");
+
+                    var r = new Random();
+                    if (ListLinks.Count <= 0) break;
+                    for (int i = 0; i < ListLinks.Count; i++)
+                    {
+                        var URL = await ListLinks[i].GetPropertyAsync("href");
+                        var Page = await browser.NewPageAsync();
+                        await Page.GoToAsync(URL.ToString().Replace("JSHandle:", ""), new NavigationOptions() { });
+                        Console.WriteLine($"当前正在浏览第{i}个链接:{URL.ToString().Replace("JSHandle:", "")}");
+                        Console.WriteLine($"等待{r.Next(5, 10)}秒");
+                        Thread.Sleep(1000 * r.Next(5, 10));
+                        await Page.CloseAsync(new PageCloseOptions() { RunBeforeUnload = true });
+                        Console.WriteLine($"关闭页面");
+                        Console.WriteLine($"开始下一个\n");
+                    }
+
+                    Console.WriteLine("学习结束\n");
+                    Console.WriteLine($"已学习{Links.Length}个页面\n");
+
+                    Console.WriteLine("请输入任意键退出...");
+                    Console.ReadLine();
+                    break;
+                }
+            }
+        }
+
         #endregion
 
         #region 基本使用方法
+
         /// <summary>
         /// 检查下载浏览器
         /// </summary>
@@ -420,6 +478,7 @@ namespace TestPuppeteerSharp
             }
             return true;
         }
+
         #endregion
     }
 }
