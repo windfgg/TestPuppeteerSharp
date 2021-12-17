@@ -9,6 +9,8 @@ using YamlDotNet.Serialization;
 using Spectre.Console;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using Serilog;
+using Serilog.Core;
 
 namespace Ouchn;
 
@@ -21,8 +23,9 @@ public static class Program
     /// 
     /// </summary>
     /// <returns></returns>
-    public static async Task Main(string[] args)
+    public static async Task Main()
     {
+        var sw = new Stopwatch();
         try
         {
             var Info = @"
@@ -37,7 +40,7 @@ public static class Program
                                           --国开自动刷课
                                           --Blog:http://qifengg.xyz/";
 
-            WriteSuccessLine(Info);
+            WriteSuccessLine(Info, Color.Green);
 
             await StartUpBrowser(); //启动浏览器
 
@@ -80,7 +83,8 @@ public static class Program
             var Courses = new List<string>();
             LearningCourses.ForEach((i) =>
             {
-                Courses.Add(i.CourseName + $"  课程网址:{(i.CourseUrl)}");
+                Courses.Add(i.CourseName);
+                WriteInfoLine(i.CourseName + $"  课程网址:{(i.CourseUrl)}");
             });
             var CoursesSelector = AnsiConsole.Prompt(
             new MultiSelectionPrompt<string>()
@@ -93,24 +97,44 @@ public static class Program
                    "按[green]<enter>[/]表示勾选完毕)[/]")
                .AddChoices(Courses));
 
-            var sw = new Stopwatch();
+            WriteSuccessLine($"开始计时...");
+
             sw.Start();
-            for (int i = 0; i < CoursesSelector.Count; i++)
+            foreach (var item in CoursesSelector)
             {
-                await StudyCourse(LearningCourses[i]);
+                foreach (var i in LearningCourses)
+                {
+                    if (i.CourseName == item)
+                        await StudyCourse(i);
+                }
             }
             sw.Stop();
             WriteSuccessLine($"学习完毕,本次学习耗时:{sw.Elapsed}");
+
+
             Console.WriteLine("请按下任意键退出...");
             Console.ReadKey();
             Environment.Exit(-1);
         }
+
         catch (Exception ex)
         {
             AnsiConsole.WriteException(ex);
-            Exit("发生错误,请带着错误信息联系作者...");
+            sw.Stop();
+            WriteErrorLine("发生错误...");
+            WriteSuccessLine($"本次学习耗时:{sw.Elapsed}");
+        }
+        finally
+        {
+
         }
     }
+
+    public static Logger Log { get; set; } = new LoggerConfiguration()
+       .MinimumLevel.Debug()
+       .WriteTo.Console()
+       .WriteTo.File(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log-") + ".txt", rollingInterval: RollingInterval.Day)//将日志输出到目标路径，文件的生成方式为每天生成一个文件
+       .CreateLogger();
 
     public static List<LearningCourse> LearningCourses { get; set; }
     public static Browser Browser { get; set; }
@@ -258,6 +282,7 @@ public static class Program
             table.AddColumn("Id");
             table.AddColumn("课程");
             table.AddColumn("学习进度");
+            table.AddColumn("形考成绩");
             table.AddColumn("学分");
             table.AddColumn("未完成的作业和测验");
 
@@ -265,11 +290,12 @@ public static class Program
             {
                 var item = LearningCourses[i];
                 var CourseName = $"{item.CourseName}({item.CourseNatureName})";
-                var ExamScore = $"{item.ExamScore}%";
+                var ExamScore = $"{item.ExamScore}";
                 var Credit = item.Credit.ToString();
                 var UnCompletedTestAssignCount = item.UnCompletedTestAssignCount;
-
-                table.AddRow(i.ToString(), CourseName, ExamScore, Credit, UnCompletedTestAssignCount);
+                var Chu = Math.Round((double)(item.CompletedFormativeTestCount / item.ActivityCount), 2);
+                var Learning = Chu * 100;
+                table.AddRow(i.ToString(), CourseName, Learning.ToString() + "%", ExamScore, Credit, UnCompletedTestAssignCount);
             }
 
             Console.WriteLine($"  班级名称:{LearningCourses[0].CourseClassName}");
@@ -359,33 +385,36 @@ public static class Program
     {
         await course.Page.BringToFrontAsync();
         await course.Page.WaitForTimeoutAsync(1000);
-        WriteSuccessLine($"切换到课程:{course.CourseName}页面");
+        Log.Information($"切换到课程:{course.CourseName}页面");
         var Links = await course.Page.QuerySelectorAllAsync("a[class='aalink']"); //获取第一个页面的所有a标签class为aalink的
-        WriteSuccessLine($"[课程:{course.CourseName}]获取到{Links.Length}个链接");
+        Log.Information($"[课程:{course.CourseName}]获取到{Links.Length}个链接");
         async Task OpenLink()
         {
-
             var r = new Random();
             for (int i = 0; i < Links.Length; i++)
             {
-                var URL = await Links[i].GetPropertyAsync("href");
-                if (URL.ToString().Replace("JSHandle:", "").Contains(""))
-                {
 
-                }
+                var URL = await Links[i].GetPropertyAsync("href");
                 var Page = await Browser.NewPageAsync();
-                await Page.GoToAsync(URL.ToString().Replace("JSHandle:", ""), new NavigationOptions() { });
-                Console.WriteLine($"[{course.CourseName}]当前正在浏览第{i}个链接:{URL.ToString().Replace("JSHandle:", "")}");
+                Page.Error += async (a, b) =>
+                {
+                    await Page.CloseAsync();
+                };
+                Page.DefaultTimeout = 60000;
+                await Page.GoToAsync(URL.ToString().Replace("JSHandle:", ""));
+                Log.Information($"[{course.CourseName}]当前正在浏览第{i}个链接:{URL.ToString().Replace("JSHandle:", "")}");
+                //Log.Debug(await Page.GetContentAsync());
+                Log.Debug($"网页标题:" + await Page.GetTitleAsync());
                 var s = r.Next(Configure.MinSeconds, Configure.MaxSeconds);
-                Console.WriteLine($"[{course.CourseName}]等待{s}秒");
+                Log.Information($"[{course.CourseName}]等待{s}秒");
                 await Page.WaitForTimeoutAsync(s * 1000);
-                await Page.CloseAsync(new PageCloseOptions() { RunBeforeUnload = true });
-                Console.WriteLine($"[{course.CourseName}]关闭页面");
-                Console.WriteLine($"开始下一个\n");
+                await Page.CloseAsync();
+                Log.Information($"[{course.CourseName}]关闭页面");
+                Log.Information($"开始下一个课程\n");
             }
         }
         await OpenLink();
-        Console.WriteLine($"[{course.CourseName}]学习结束 已学习{Links.Length}个链接\n");
+        Log.Information($"[{course.CourseName}]学习结束 已学习{Links.Length}个链接\n");
     }
     #endregion
 

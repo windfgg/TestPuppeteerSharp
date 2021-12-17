@@ -1,9 +1,5 @@
 ﻿using PuppeteerSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Ouchn;
 
@@ -43,7 +39,7 @@ public class LearningCourse
     /// <summary>
     /// 已完成的作业和测验
     /// </summary>
-    public string CompletedFormativeTestCount { get; set; }
+    public double CompletedFormativeTestCount { get; set; }
 
     /// <summary>
     /// 课程网址
@@ -54,6 +50,11 @@ public class LearningCourse
     /// 
     /// </summary>
     public Page Page { get; set; }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public double ActivityCount { get; set; }
 }
 
 public class Configure
