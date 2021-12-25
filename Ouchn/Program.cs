@@ -393,7 +393,6 @@ public static class Program
             var r = new Random();
             for (int i = 0; i < Links.Length; i++)
             {
-
                 var URL = await Links[i].GetPropertyAsync("href");
                 var Page = await Browser.NewPageAsync();
                 Page.Error += async (a, b) =>
@@ -401,15 +400,24 @@ public static class Program
                     await Page.CloseAsync();
                 };
                 Page.DefaultTimeout = 60000;
-                await Page.GoToAsync(URL.ToString().Replace("JSHandle:", ""));
-                Log.Information($"[{course.CourseName}]当前正在浏览第{i}个链接:{URL.ToString().Replace("JSHandle:", "")}");
-                //Log.Debug(await Page.GetContentAsync());
-                Log.Debug($"网页标题:" + await Page.GetTitleAsync());
-                var s = r.Next(Configure.MinSeconds, Configure.MaxSeconds);
-                Log.Information($"[{course.CourseName}]等待{s}秒");
-                await Page.WaitForTimeoutAsync(s * 1000);
-                await Page.CloseAsync();
-                Log.Information($"[{course.CourseName}]关闭页面");
+                var Href = URL.ToString().Replace("JSHandle:", "");
+                if (Href == "about:blank")
+                {
+                    Log.Error("Herf为空页面，跳过本链接");
+                }
+                else
+                {
+                    await Page.GoToAsync(Href);
+                    Log.Information($"[{course.CourseName}]当前正在浏览第{i}个链接:{Href}");
+                    //Log.Debug(await Page.GetContentAsync());
+                    Log.Debug($"网页标题:" + await Page.GetTitleAsync());
+                    var s = r.Next(Configure.MinSeconds, Configure.MaxSeconds);
+                    Log.Information($"[{course.CourseName}]等待{s}秒");
+                    await Page.WaitForTimeoutAsync(s * 1000);
+                    await Page.CloseAsync();
+                    Log.Information($"[{course.CourseName}]关闭页面");
+                }
+
                 Log.Information($"开始下一个课程\n");
             }
         }
