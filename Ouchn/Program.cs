@@ -471,6 +471,7 @@ public static class Program
             Browser = await extra.LaunchAsync(new LaunchOptions()
             {
                 Headless = !Configure.Debug,
+                IgnoredDefaultArgs = new string[] { "--incognito" }
             });
         }
         catch
