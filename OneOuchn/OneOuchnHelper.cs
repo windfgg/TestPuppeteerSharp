@@ -349,6 +349,7 @@ namespace OneOuchn
                         LogHelper.WriteErrorLine($"手动完成链接:https://lms.ouchn.cn/course/{CourseId}/learning-activity/full-screen#/exam/{LearnActivitieModel.id}");
                         NotFinished.AppendLine($"课程模块：{CoursesModulesModel.name} 模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type})完成标准：{LearnActivitieModel.completion_criterion}\n地址:https://lms.ouchn.cn/course/{CoursesModulesModel.id}/learning-activity/full-screen#/exam/{LearnActivitieModel.id}\n\n");
                     }
+                    Thread.Sleep(new Random().Next((ConfigureHelper.Configure.MinSeconds * 100), (ConfigureHelper.Configure.MinSeconds * 100)));
                 }
                 LogHelper.WriteColorLine($"\n=====课程模块：{CoursesModulesModel.name}({CoursesModulesModel.id})=====", ConsoleColor.Blue);
             }
