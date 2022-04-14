@@ -1,0 +1,104 @@
+﻿using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace OneOuchn
+{
+    /// <summary>
+    /// Http请求类
+    /// </summary>
+    public class HttpClientHelper
+    {
+        public HttpClient client = null;
+
+        public HttpClientHelper()
+        {
+            client = new HttpClient();
+        }
+
+        public async Task<string> PostAsync(string url, string strJson)//post异步请求方法
+        {
+            try
+            {
+                HttpContent content = new StringContent(strJson);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+                //由HttpClient发出异步Post请求
+                HttpResponseMessage res = await client.PostAsync(url, content);
+                if (res.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    string str = res.Content.ReadAsStringAsync().Result;
+                    return str;
+                }
+                else
+                    return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        public string Post(string url, string strJson)//post同步请求方法
+        {
+            try
+            {
+                HttpContent content = new StringContent(strJson);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+                //client.DefaultRequestHeaders.Connection.Add("keep-alive");
+                //由HttpClient发出Post请求
+                Task<HttpResponseMessage> res = client.PostAsync(url, content);
+                if (res.Result.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    string str = res.Result.Content.ReadAsStringAsync().Result;
+                    return str;
+                }
+                else
+                    return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public async Task<string> GetStringAsync(string Url)
+        {
+            try
+            {
+                var responseString = await client.GetStringAsync(Url);
+                return responseString;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public async Task<JObject> GetJObjectAsync(string Url)
+        {
+            try
+            {
+                var responseString = await client.GetStringAsync(Url);
+                return JObject.Parse(responseString);
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+    }
+}

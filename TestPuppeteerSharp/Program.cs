@@ -112,7 +112,9 @@ namespace TestPuppeteerSharp
         {
             await CheckDownloadBrowser();
             await CreateBrowser();
-            AnsiConsole.WriteLine(browser.WebSocketEndpoint); //输出ws终结点
+            //AnsiConsole.WriteLine(browser.WebSocketEndpoint); //输出ws终结点
+
+
         }
 
         #region 使用例子
