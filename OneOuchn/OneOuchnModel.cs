@@ -54,6 +54,11 @@ namespace OneOuchn
         /// 
         /// </summary>
         public List<Upload> uploads { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public int module_id { get; set; }
     }
 
     /// <summary>
@@ -74,5 +79,15 @@ namespace OneOuchn
         public List<Videos> videos { get; set; }
     }
 
+    public class TopicCategories
+    {
+        public int id { get; set; }
+        public TopicCategoriesActivity activity { get; set; }
+    }
+
+    public class TopicCategoriesActivity
+    {
+        public int module_id { get; set; }
+    }
 }
 

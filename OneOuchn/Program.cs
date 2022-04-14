@@ -19,11 +19,11 @@ namespace OneOuchn;
 public static class Program
 {
     #region 公共变量
-   // public static Logger Loggerr { get; set; } = new LoggerConfiguration()
-   //.MinimumLevel.Debug()
-   //.WriteTo.Console()
-   //.WriteTo.File(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log-") + ".txt", rollingInterval: RollingInterval.Day)//将日志输出到目标路径，文件的生成方式为每天生成一个文件
-   //.CreateLogger();
+    // public static Logger Loggerr { get; set; } = new LoggerConfiguration()
+    //.MinimumLevel.Debug()
+    //.WriteTo.Console()
+    //.WriteTo.File(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log-") + ".txt", rollingInterval: RollingInterval.Day)//将日志输出到目标路径，文件的生成方式为每天生成一个文件
+    //.CreateLogger();
 
     public static BrowerHelper Browser { get; set; } = new BrowerHelper();
 
@@ -53,11 +53,24 @@ public static class Program
                                           --博客:https://windfgg.github.io/";
 
             LogHelper.WriteSuccessLine(Info, Color.Green);
-        
+
             OneOuchnHelper = new OneOuchnHelper(Browser, ConfigureHelper);
 
             if (!ConfigureHelper.Configure.CookieLogin)
             {
+                if (string.IsNullOrWhiteSpace(ConfigureHelper.Configure.UserNo))
+                {
+                    LogHelper.WriteErrorLine("配置文件中UserNo不能为空 请填写配置文件后再试(输入任意键退出)");
+                    Console.ReadKey();
+                    Environment.Exit(-1);
+                }
+
+                if (string.IsNullOrWhiteSpace(ConfigureHelper.Configure.Password))
+                {
+                    LogHelper.WriteErrorLine("配置文件中UserNo不能为空 请填写配置文件后再试(输入任意键退出)");
+                    Console.ReadKey();
+                    Environment.Exit(-1);
+                }
                 await Browser.StartUpBrowser();
                 await OneOuchnHelper.LoginOuchn(); //登录国开
             }
@@ -80,7 +93,7 @@ public static class Program
                     Console.ReadKey();
                     Environment.Exit(-1);
                 }
-                
+
             }
             foreach (var item in OneOuchnHelper.CourseList)
             {
@@ -93,9 +106,14 @@ public static class Program
                 LogHelper.WriteErrorLine($"\n===========课程：{item.Key}({item.Value})学习结束===========\n");
                 sw = new Stopwatch();
             }
+            LogHelper.WriteWarningLine("\n======当前未完成的测试======\n" + OneOuchnHelper.NotFinished.ToString());
+            LogHelper.WriteSuccessLine("未完成的单元测试或其他写入程序根目录下的log文件夹 请自行查看");
 
-            LogHelper.WriteSuccessLine($"学习完毕,本次学习耗时:{sw.Elapsed}");
-            Console.WriteLine("请按下任意键退出...");
+            Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log"));
+            var FilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log", DateTime.Now.ToString("yyyy-MM-dd") + "---未完成的单元测试或其他");
+            File.WriteAllText(FilePath, "\n======当前未完成的测试======\n" + OneOuchnHelper.NotFinished.ToString());
+
+            Console.WriteLine("学习完毕,请按下任意键退出...");
             Console.ReadKey();
         }
 

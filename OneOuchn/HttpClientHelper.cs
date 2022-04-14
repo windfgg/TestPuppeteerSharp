@@ -19,6 +19,12 @@ namespace OneOuchn
             client = new HttpClient();
         }
 
+        /// <summary>
+        /// Post Aaync
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="strJson"></param>
+        /// <returns></returns>
         public async Task<string> PostAsync(string url, string strJson)//post异步请求方法
         {
             try
@@ -41,18 +47,41 @@ namespace OneOuchn
             }
         }
 
-        public string Post(string url, string strJson)//post同步请求方法
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="strJson"></param>
+        /// <returns></returns>
+        public async Task<JObject> PostAsyncJObject(string url, string strJson)
         {
             try
             {
                 HttpContent content = new StringContent(strJson);
                 content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-                //client.DefaultRequestHeaders.Connection.Add("keep-alive");
-                //由HttpClient发出Post请求
-                Task<HttpResponseMessage> res = client.PostAsync(url, content);
-                if (res.Result.StatusCode == System.Net.HttpStatusCode.OK)
+                HttpResponseMessage res = await client.PostAsync(url, content);
+                string str = await res.Content.ReadAsStringAsync();
+                return JObject.Parse(str);
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public async Task<string> DeleteAsync(string url)
+        {
+            try
+            {
+                HttpResponseMessage res = await client.DeleteAsync(url);
+                if (res.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    string str = res.Result.Content.ReadAsStringAsync().Result;
+                    string str = res.Content.ReadAsStringAsync().Result;
                     return str;
                 }
                 else

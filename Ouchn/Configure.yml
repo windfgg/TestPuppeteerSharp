@@ -1,0 +1,5 @@
+UserNo: '' #国开账号
+Password: '' #国开密码
+MinSeconds: 15 #刷课随机最小秒数
+MaxSeconds: 30 #刷课随机最大秒数
+Debug: true #是否开启调试页面

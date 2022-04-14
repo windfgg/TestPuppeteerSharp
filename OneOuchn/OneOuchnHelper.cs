@@ -17,6 +17,8 @@ namespace OneOuchn
         private ConfigureHelper ConfigureHelper { get; }
         public string Cookies { get; set; }
 
+        public StringBuilder NotFinished = new StringBuilder();
+
         private string Host { get; set; } = "https://lms.ouchn.cn";
 
         public HttpClientHelper Clinet { get; set; } = new HttpClientHelper();
@@ -186,7 +188,7 @@ namespace OneOuchn
         /// </summary>
         /// <param name="list"></param>
         /// <returns></returns>
-        public async Task ConsleCourseTable(Dictionary<string,string> CrouseList)
+        public async Task ConsleCourseTable(Dictionary<string, string> CrouseList)
         {
             var table = new Table();
 
@@ -194,11 +196,22 @@ namespace OneOuchn
             table.AddColumn("Id");
             table.AddColumn("课程Id");
             table.AddColumn("课程名称");
+            table.AddColumn("进度");
             int i = 1;
             foreach (var item in CrouseList)
             {
-                table.AddRow(i.ToString(), item.Key, item.Value);
-                i++;
+                try
+                {
+                    var StartCompletenessData = await Clinet.GetJObjectAsync(@$"https://lms.ouchn.cn/api/course/{item.Value}/my-completeness");
+                    var StrartCompleteness = StartCompletenessData["study_completeness"].ToString() + "%";
+                    table.AddRow(i.ToString(), item.Key, item.Value, StrartCompleteness);
+                    i++;
+                }
+                catch
+                {
+                    CrouseList.Remove(item.Key);
+                    continue;
+                }
             }
 
             AnsiConsole.Write(table);
@@ -226,7 +239,7 @@ namespace OneOuchn
                 await ConsleCourseTable(CourseList);
                 return false;
             }
-       
+
         }
 
         /// <summary>
@@ -274,7 +287,6 @@ namespace OneOuchn
                     Console.WriteLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type})完成标准：{LearnActivitieModel.completion_criterion}({LearnActivitieModel.id})");
                     if (LearnActivitieModel.completion_criterion == "查看页面")
                     {
-                        Thread.Sleep(1000);
                         await Clinet.PostAsync(@$"https://lms.ouchn.cn/api/course/activities-read/{LearnActivitieModel.id}", "{}");
                         LogHelper.WriteSuccessLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type}) {LearnActivitieModel.completion_criterion} 完成\n");
                     }
@@ -297,9 +309,45 @@ namespace OneOuchn
                             LogHelper.WriteSuccessLine($"模块标题：{LearnActivitieModel.title} {LearnActivitieModel.completion_criterion} 完成");
                         }
                     }
+                    else if (LearnActivitieModel.completion_criterion == "访问线上链接")
+                    {
+                        await Clinet.PostAsync(@$"https://lms.ouchn.cn/api/course/activities-read/{LearnActivitieModel.id}", "{}");
+                        LogHelper.WriteSuccessLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type}) {LearnActivitieModel.completion_criterion} 完成\n");
+                    }
+                    else if (LearnActivitieModel.completion_criterion == "参与发帖或回帖")
+                    {
+                        
+                        if (LearnActivitieModel.title == "答疑论坛") 
+                        {
+                            var TopicCategoriesData = await Clinet.GetJObjectAsync(@$"https://lms.ouchn.cn/api/courses/{CourseId}/topic-categories?fields=id,title,activity(id,sort,module_id,syllabus_id,start_time,end_time,is_started,is_closed,data,can_show_score,score_percentage,title,prerequisites,submit_by_group,group_set_id,group_set_name,imported_from),referrer_type&include_group_topic_categories=True");
+                            var TopicCategoriesModels = TopicCategoriesData["topic_categories"].ToString().JsonTo<List<TopicCategories>>();
+                            foreach (var item in TopicCategoriesModels)
+                            {
+                                if (item.activity.module_id == LearnActivitieModel.module_id)
+                                {
+                                    var CategoryId = item.id;
+                                    var TopicsData = await Clinet.PostAsyncJObject(@$"https://lms.ouchn.cn/api/topics", new { title = "测试", content = "<p>测试</p>", uploads = new string[] { }, category_id = CategoryId }.ToJson());
+                                    LogHelper.WriteSuccessLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type}) {LearnActivitieModel.completion_criterion} 发帖完成");
+                                    var TopicsId = TopicsData["id"].ToString();
+
+                                    LogHelper.WriteSuccessLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type}) {LearnActivitieModel.completion_criterion} 删除帖子完成\n");
+                                    await Clinet.DeleteAsync($"https://lms.ouchn.cn/api/topics/{TopicsId}");
+                                }
+                                else
+                                    continue;
+                            }
+                        }
+                        else
+                        {
+                            LogHelper.WriteSuccessLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type}) {LearnActivitieModel.completion_criterion} 不需要发帖 完成\n");
+                        }
+                    }
                     else
                     {
                         LogHelper.WriteErrorLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type})完成标准：{LearnActivitieModel.completion_criterion}未完成");
+                        LogHelper.WriteErrorLine($"答题或测试暂时完成不了 请手动完成 有题库的可以联系我");
+                        LogHelper.WriteErrorLine($"手动完成链接:https://lms.ouchn.cn/course/{CourseId}/learning-activity/full-screen#/exam/{LearnActivitieModel.id}");
+                        NotFinished.AppendLine($"课程模块：{CoursesModulesModel.name} 模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type})完成标准：{LearnActivitieModel.completion_criterion}\n地址:https://lms.ouchn.cn/course/{CoursesModulesModel.id}/learning-activity/full-screen#/exam/{LearnActivitieModel.id}\n\n");
                     }
                 }
                 LogHelper.WriteColorLine($"\n=====课程模块：{CoursesModulesModel.name}({CoursesModulesModel.id})=====", ConsoleColor.Blue);
