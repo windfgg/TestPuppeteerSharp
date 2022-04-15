@@ -111,7 +111,7 @@ public static class Program
 
             Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log"));
             var FilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log", DateTime.Now.ToString("yyyy-MM-dd") + "---未完成的单元测试或其他");
-            File.WriteAllText(FilePath, "\n======当前未完成的测试======\n" + OneOuchnHelper.NotFinished.ToString());
+            File.WriteAllText(FilePath + ".txt", "\n======当前未完成的测试======\n" + OneOuchnHelper.NotFinished.ToString());
 
             Console.WriteLine("学习完毕,请按下任意键退出...");
             Console.ReadKey();

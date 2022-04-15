@@ -253,7 +253,7 @@ namespace OneOuchn
             bool IsOk = true;
             while (IsOk)
             {
-                await Page.WaitForTimeoutAsync(1000);
+                await Page.WaitForTimeoutAsync(500);
                 string PageContent = await Page.GetContentAsync();
                 if (PageContent.Contains(Condition))
                     IsOk = false;
@@ -277,13 +277,13 @@ namespace OneOuchn
             var CoursesModulesModels = CoursesModulesData["modules"].ToString().JsonTo<List<CourseModule>>();
             foreach (var CoursesModulesModel in CoursesModulesModels)
             {
-                Thread.Sleep(new Random().Next((ConfigureHelper.Configure.MinSeconds * 100), (ConfigureHelper.Configure.MinSeconds * 100)));
+                Thread.Sleep(new Random().Next((ConfigureHelper.Configure.MinSeconds * 1000), (ConfigureHelper.Configure.MinSeconds * 1000)));
                 LogHelper.WriteColorLine($"\n=====课程模块：{CoursesModulesModel.name}({CoursesModulesModel.id})=====", ConsoleColor.Blue);
                 var LearnActivitieData = await Clinet.GetJObjectAsync(@$"https://lms.ouchn.cn/api/course/{CourseId}/all-activities?module_ids=[{CoursesModulesModel.id}]&activity_types=learning_activities,exams,classrooms");
                 var LearnActivitieModels = LearnActivitieData["learning_activities"].ToString().JsonTo<List<LearnActivitie>>();
                 foreach (var LearnActivitieModel in LearnActivitieModels)
                 {
-                    Thread.Sleep(new Random().Next((ConfigureHelper.Configure.MinSeconds * 100), (ConfigureHelper.Configure.MinSeconds * 100)));
+                    Thread.Sleep(new Random().Next((ConfigureHelper.Configure.MinSeconds * 1000), (ConfigureHelper.Configure.MinSeconds * 1000)));
                     Console.WriteLine($"模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type})完成标准：{LearnActivitieModel.completion_criterion}({LearnActivitieModel.id})");
                     if (LearnActivitieModel.completion_criterion == "查看页面")
                     {
@@ -349,7 +349,6 @@ namespace OneOuchn
                         LogHelper.WriteErrorLine($"手动完成链接:https://lms.ouchn.cn/course/{CourseId}/learning-activity/full-screen#/exam/{LearnActivitieModel.id}");
                         NotFinished.AppendLine($"课程模块：{CoursesModulesModel.name} 模块标题：{LearnActivitieModel.title}({LearnActivitieModel.type})完成标准：{LearnActivitieModel.completion_criterion}\n地址:https://lms.ouchn.cn/course/{CoursesModulesModel.id}/learning-activity/full-screen#/exam/{LearnActivitieModel.id}\n\n");
                     }
-                    Thread.Sleep(new Random().Next((ConfigureHelper.Configure.MinSeconds * 100), (ConfigureHelper.Configure.MinSeconds * 100)));
                 }
                 LogHelper.WriteColorLine($"\n=====课程模块：{CoursesModulesModel.name}({CoursesModulesModel.id})=====", ConsoleColor.Blue);
             }
